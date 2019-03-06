@@ -6,28 +6,38 @@
 #include <unistd.h>
 #include <signal.h>
 
+// STRUCTS
+struct queue{
+	int buf[5];
+};
+
 // TYPEDEFS
 typedef sem_t Semaphore;
 typedef pthread_t Thread;
 typedef int Consumable;
+typedef pthread_mutex_t Mutex;
+typedef struct queue Queue;
 
 // GLOBALS
-Semaphore emptySlots, fullSlots, mutex;
+Semaphore emptySlots, fullSlots;
+Mutex mutex = PTHREAD_MUTEX_INITIALIZER;
 Thread *consumers;
 Thread *producers;
 int numProducers, numConsumers, sleepyTime;
-Consumable buffer[5];
+Consumable buf[5];
 bool running;
 
 // FUNCTION DECLATARIONS
 void *producerHandler(void*);
 void *consumerHandler(void*);
+void placeConsumable(Consumable);
+Consumable produce();
+Consumable getConsumable();
 bool semSetup();
 void destroySems();
 bool threadSetup(char *argv[]);
 void joinThreads();
 void cleanup(int);
-
 
 int main(int argc, char *argv[])
 {
@@ -66,9 +76,11 @@ int main(int argc, char *argv[])
 	}
 }
 
+// FUNCTION DEFINITIONS
+
 bool semSetup()
 {
-	if(sem_init(&mutex, 0, 1) < 0 || sem_init(&emptySlots, 0, 5) < 0 || sem_init(&fullSlots, 0, 0))
+	if(sem_init(&emptySlots, 0, 5) < 0 || sem_init(&fullSlots, 0, 0))
 		return false;
 	else
 		return true;
@@ -140,28 +152,61 @@ void destroySems()
 {
 	sem_destroy(&emptySlots);
 	sem_destroy(&fullSlots);
-	sem_destroy(&mutex);
 }
 
 void *producerHandler(void *args)
 {
-	printf("Hey there! I'm a producer!\n");
+	while(running)
+	{
+		Consumable production = produce();
+		sem_wait(&emptySlots);
+		pthread_mutex_lock(&mutex);
+		printf("Produced %d.\n", production);
+		placeConsumable(production);
+		pthread_mutex_unlock(&mutex);
+		sem_post(&fullSlots);
+	}
 
-	while(running);
+	printf("Producer terminating...\n");
 
 	return NULL;
 }
 
 void *consumerHandler(void *args)
 {
-	printf("Hiya! I'm a consumer!\n");
+	while(running)
+	{
+		sem_wait(&fullSlots);
+		pthread_mutex_lock(&mutex);
+		Consumable c = getConsumable();
+		printf("Consumed %d.\n", c);
+		pthread_mutex_unlock(&mutex);
+		sem_post(&emptySlots);
+	}
 
-	while(running);
-
+	printf("Consumer terminating...\n");
 	return NULL;
 }
 
 Consumable produce()
 {
 	return (Consumable)rand();
+}
+
+void placeConsumable(Consumable c)
+{
+	//buf assumed to have at least 1 open spot, since this code will only run
+	//if a producer got a lock on emptySlots
+	int index;
+	sem_getvalue(&fullSlots, &index);
+	buf[index] = c;
+}
+
+Consumable getConsumable()
+{
+	//buf assumed to have at least 1 full slot, since this code will only run
+	//if a consumer got a lock on fullSlots
+	int index;
+	sem_getvalue(&fullSlots, &index);
+	return buf[index-1];
 }
