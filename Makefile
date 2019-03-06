@@ -1,4 +1,4 @@
-CFLAGS = -Wall -pedantic -std=c99 -g -lpthread
+CFLAGS = -Wall -pedantic -std=c99 -g -lpthread -lrt
 pc: pc.o
 	gcc -o pc pc.o $(CFLAGS)
 pc.o: pc.c
