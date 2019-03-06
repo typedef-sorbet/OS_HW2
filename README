@@ -1,0 +1,28 @@
+Author:
+	Spencer Warneke (spencer.warneke@wsu.edu)
+Date:
+	March 8, 2019
+Included Files:
+	cs460-hw2-011582159.zip
+	├── Makefile
+	├── pc.c
+	├── README
+	└── report.pdf
+To Build:
+	If you have make installed,
+
+	$ make
+
+	Otherwise, you can do
+
+	$ gcc -o pc pc.c -lpthread -lrt
+To Run:
+	pc necessitates 3 command line arguments; its usage is as follows:
+
+	$ ./pc <# producer threads> <# consumer threads> <total program duration (sec)>
+
+	So, for example, if you wanted to run the program with 15 producers and 10 consumers for 20 seconds, you would do
+
+	$ ./pc 15 10 20
+
+	Note: pc implicitly assumes that command line arguments are valid integers. It will detect if they are out of range (< 1), but not if they are not integers at all.
